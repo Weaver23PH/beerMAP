@@ -1,3 +1,6 @@
+* {
+    font-family: "Century Schoolbook L", serif;
+}
 #map {
     position: relative;
     height: 80vh;
@@ -6,4 +9,15 @@
 
 #popup {
     padding-bottom: 45px;
+}
+.container-fluid{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+iframe {
+    height: 80vh;
+    margin-top: 50px;
+    border: none;
 }

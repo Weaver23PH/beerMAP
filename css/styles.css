@@ -14,6 +14,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-direction: column;
     text-align: center;
+}
+iframe {
+    height: 80vh;
+    margin-top: 50px;
+    border: none;
 }
