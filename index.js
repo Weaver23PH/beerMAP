@@ -10,7 +10,8 @@ import {Icon, Style} from 'ol/style.js';
 
 var wroclawCoords = [17.0333, 51.1098];
 
-var beerPlaces = [[51.10110399999999, 17.02503619999993, "12 Krok"],
+var beerPlaces = [
+    [51.10110399999999, 17.02503619999993, "12 Krok"],
     [51.107816, 17.036094999999932, "4hops"],
     [51.1119942, 17.029769999999985, "Academus Cafe/Pub"],
     [51.109761735964064, 17.02312892083205, "AleBrowar"],
@@ -25,7 +26,8 @@ var beerPlaces = [[51.10110399999999, 17.02503619999993, "12 Krok"],
     [51.13171984855311, 17.05950879264242, "Pub Browaru Stu Mostów"],
     [51.109326656194085, 17.02518484722134, "Szynkarnia"],
     [51.11274099000954, 17.039767458197048, "Targowa"],
-    [51.108447591287494, 17.024190471163934, "VaffaNapoli"]];
+    [51.108447591287494, 17.024190471163934, "VaffaNapoli"]
+];
 
 var vectorSource = new VectorSource({});
 
@@ -87,10 +89,9 @@ map.on('click', function (evt) {
         function (feature) {
             return feature;
         });
-
+    var featName = feature.get('name');
     if (feature) {
         var coordinates = feature.getGeometry().getCoordinates();
-        var featName = feature.get('name');
         popup.setPosition(coordinates);
         $(element).popover({
             placement: 'top',
@@ -105,10 +106,9 @@ map.on('click', function (evt) {
 
 // change mouse cursor when over marker
 map.on('pointermove', function (e) {
-    if (e.dragging) {
-        $(element).popover('destroy');
-        return;
-    }
+
+    $(element).popover('destroy');
+
     var pixel = map.getEventPixel(e.originalEvent);
     var hit = map.hasFeatureAtPixel(pixel);
     map.getTarget().style.cursor = hit ? 'pointer' : '';

@@ -46777,15 +46777,14 @@ map.on('click', function (evt) {
     var feature = map.forEachFeatureAtPixel(evt.pixel, function (feature) {
         return feature;
     });
-
+    var featName = feature.get('name');
     if (feature) {
         var coordinates = feature.getGeometry().getCoordinates();
-        var featName = feature.get('name');
         popup.setPosition(coordinates);
         $(element).popover({
             placement: 'top',
             html: true,
-            content: featName + "click elsewhere"
+            content: featName
         });
         $(element).popover('show');
     } else {
@@ -46795,10 +46794,9 @@ map.on('click', function (evt) {
 
 // change mouse cursor when over marker
 map.on('pointermove', function (e) {
-    if (e.dragging) {
-        $(element).popover('destroy');
-        return;
-    }
+
+    $(element).popover('destroy');
+
     var pixel = map.getEventPixel(e.originalEvent);
     var hit = map.hasFeatureAtPixel(pixel);
     map.getTarget().style.cursor = hit ? 'pointer' : '';
@@ -46832,7 +46830,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '35419' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '40297' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
@@ -46974,4 +46972,4 @@ function hmrAccept(bundle, id) {
   });
 }
 },{}]},{},["node_modules/parcel-bundler/src/builtins/hmr-runtime.js","index.js"], null)
-//# sourceMappingURL=/beermap.ec086fe5.map
+//# sourceMappingURL=/beerMAP.bc68d818.map
