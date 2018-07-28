@@ -1,0 +1,21 @@
+{
+  "name": "beermap",
+  "version": "1.0.0",
+  "description": "map of places with beer in Wro",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "parcel index.html",
+    "build": "parcel build --public-url . index.html"
+  },
+  "keywords": [
+    "map",
+    "beer",
+    "wrocław"
+  ],
+  "author": "Weaver23PH",
+  "license": "ISC",
+  "devDependencies": {
+    "parcel-bundler": "^1.9.7"
+  }
+}
