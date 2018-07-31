@@ -46678,7 +46678,251 @@ Object.defineProperty(exports, 'Text', {
 });
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-},{"./style/Atlas.js":"node_modules/ol/style/Atlas.js","./style/AtlasManager.js":"node_modules/ol/style/AtlasManager.js","./style/Circle.js":"node_modules/ol/style/Circle.js","./style/Fill.js":"node_modules/ol/style/Fill.js","./style/Icon.js":"node_modules/ol/style/Icon.js","./style/IconImage.js":"node_modules/ol/style/IconImage.js","./style/Image.js":"node_modules/ol/style/Image.js","./style/RegularShape.js":"node_modules/ol/style/RegularShape.js","./style/Stroke.js":"node_modules/ol/style/Stroke.js","./style/Style.js":"node_modules/ol/style/Style.js","./style/Text.js":"node_modules/ol/style/Text.js"}],"index.js":[function(require,module,exports) {
+},{"./style/Atlas.js":"node_modules/ol/style/Atlas.js","./style/AtlasManager.js":"node_modules/ol/style/AtlasManager.js","./style/Circle.js":"node_modules/ol/style/Circle.js","./style/Fill.js":"node_modules/ol/style/Fill.js","./style/Icon.js":"node_modules/ol/style/Icon.js","./style/IconImage.js":"node_modules/ol/style/IconImage.js","./style/Image.js":"node_modules/ol/style/Image.js","./style/RegularShape.js":"node_modules/ol/style/RegularShape.js","./style/Stroke.js":"node_modules/ol/style/Stroke.js","./style/Style.js":"node_modules/ol/style/Style.js","./style/Text.js":"node_modules/ol/style/Text.js"}],"node_modules/ol/source/Cluster.js":[function(require,module,exports) {
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+var _util = require('../util.js');
+
+var _asserts = require('../asserts.js');
+
+var _Feature = require('../Feature.js');
+
+var _Feature2 = _interopRequireDefault(_Feature);
+
+var _coordinate = require('../coordinate.js');
+
+var _events = require('../events.js');
+
+var _EventType = require('../events/EventType.js');
+
+var _EventType2 = _interopRequireDefault(_EventType);
+
+var _extent = require('../extent.js');
+
+var _Point = require('../geom/Point.js');
+
+var _Point2 = _interopRequireDefault(_Point);
+
+var _Vector = require('../source/Vector.js');
+
+var _Vector2 = _interopRequireDefault(_Vector);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+/**
+ * @typedef {Object} Options
+ * @property {module:ol/source/Source~AttributionLike} [attributions] Attributions.
+ * @property {number} [distance=20] Minimum distance in pixels between clusters.
+ * @property {module:ol/extent~Extent} [extent] Extent.
+ * @property {function(module:ol/Feature):module:ol/geom/Point} [geometryFunction]
+ * Function that takes an {@link module:ol/Feature} as argument and returns an
+ * {@link module:ol/geom/Point} as cluster calculation point for the feature. When a
+ * feature should not be considered for clustering, the function should return
+ * `null`. The default, which works when the underyling source contains point
+ * features only, is
+ * ```js
+ * function(feature) {
+ *   return feature.getGeometry();
+ * }
+ * ```
+ * See {@link module:ol/geom/Polygon~Polygon#getInteriorPoint} for a way to get a cluster
+ * calculation point for polygons.
+ * @property {module:ol/proj~ProjectionLike} projection Projection.
+ * @property {module:ol/source/Vector} source Source.
+ * @property {boolean} [wrapX=true] Whether to wrap the world horizontally.
+ */
+
+/**
+ * @classdesc
+ * Layer source to cluster vector data. Works out of the box with point
+ * geometries. For other geometry types, or if not all geometries should be
+ * considered for clustering, a custom `geometryFunction` can be defined.
+ * @api
+ */
+var Cluster = function (VectorSource) {
+  function Cluster(options) {
+    VectorSource.call(this, {
+      attributions: options.attributions,
+      extent: options.extent,
+      projection: options.projection,
+      wrapX: options.wrapX
+    });
+
+    /**
+     * @type {number|undefined}
+     * @protected
+     */
+    this.resolution = undefined;
+
+    /**
+     * @type {number}
+     * @protected
+     */
+    this.distance = options.distance !== undefined ? options.distance : 20;
+
+    /**
+     * @type {Array.<module:ol/Feature>}
+     * @protected
+     */
+    this.features = [];
+
+    /**
+     * @param {module:ol/Feature} feature Feature.
+     * @return {module:ol/geom/Point} Cluster calculation point.
+     * @protected
+     */
+    this.geometryFunction = options.geometryFunction || function (feature) {
+      var geometry = /** @type {module:ol/geom/Point} */feature.getGeometry();
+      (0, _asserts.assert)(geometry instanceof _Point2.default, 10); // The default `geometryFunction` can only handle `module:ol/geom/Point~Point` geometries
+      return geometry;
+    };
+
+    /**
+     * @type {module:ol/source/Vector}
+     * @protected
+     */
+    this.source = options.source;
+
+    (0, _events.listen)(this.source, _EventType2.default.CHANGE, this.refresh, this);
+  }
+
+  if (VectorSource) Cluster.__proto__ = VectorSource;
+  Cluster.prototype = Object.create(VectorSource && VectorSource.prototype);
+  Cluster.prototype.constructor = Cluster;
+
+  /**
+   * Get the distance in pixels between clusters.
+   * @return {number} Distance.
+   * @api
+   */
+  Cluster.prototype.getDistance = function getDistance() {
+    return this.distance;
+  };
+
+  /**
+   * Get a reference to the wrapped source.
+   * @return {module:ol/source/Vector} Source.
+   * @api
+   */
+  Cluster.prototype.getSource = function getSource() {
+    return this.source;
+  };
+
+  /**
+   * @inheritDoc
+   */
+  Cluster.prototype.loadFeatures = function loadFeatures(extent, resolution, projection) {
+    this.source.loadFeatures(extent, resolution, projection);
+    if (resolution !== this.resolution) {
+      this.clear();
+      this.resolution = resolution;
+      this.cluster();
+      this.addFeatures(this.features);
+    }
+  };
+
+  /**
+   * Set the distance in pixels between clusters.
+   * @param {number} distance The distance in pixels.
+   * @api
+   */
+  Cluster.prototype.setDistance = function setDistance(distance) {
+    this.distance = distance;
+    this.refresh();
+  };
+
+  /**
+   * handle the source changing
+   * @override
+   */
+  Cluster.prototype.refresh = function refresh() {
+    this.clear();
+    this.cluster();
+    this.addFeatures(this.features);
+    VectorSource.prototype.refresh.call(this);
+  };
+
+  /**
+   * @protected
+   */
+  Cluster.prototype.cluster = function cluster() {
+    var this$1 = this;
+
+    if (this.resolution === undefined) {
+      return;
+    }
+    this.features.length = 0;
+    var extent = (0, _extent.createEmpty)();
+    var mapDistance = this.distance * this.resolution;
+    var features = this.source.getFeatures();
+
+    /**
+     * @type {!Object.<string, boolean>}
+     */
+    var clustered = {};
+
+    for (var i = 0, ii = features.length; i < ii; i++) {
+      var feature = features[i];
+      if (!((0, _util.getUid)(feature).toString() in clustered)) {
+        var geometry = this$1.geometryFunction(feature);
+        if (geometry) {
+          var coordinates = geometry.getCoordinates();
+          (0, _extent.createOrUpdateFromCoordinate)(coordinates, extent);
+          (0, _extent.buffer)(extent, mapDistance, extent);
+
+          var neighbors = this$1.source.getFeaturesInExtent(extent);
+          neighbors = neighbors.filter(function (neighbor) {
+            var uid = (0, _util.getUid)(neighbor).toString();
+            if (!(uid in clustered)) {
+              clustered[uid] = true;
+              return true;
+            } else {
+              return false;
+            }
+          });
+          this$1.features.push(this$1.createCluster(neighbors));
+        }
+      }
+    }
+  };
+
+  /**
+   * @param {Array.<module:ol/Feature>} features Features
+   * @return {module:ol/Feature} The cluster feature.
+   * @protected
+   */
+  Cluster.prototype.createCluster = function createCluster(features) {
+    var this$1 = this;
+
+    var centroid = [0, 0];
+    for (var i = features.length - 1; i >= 0; --i) {
+      var geometry = this$1.geometryFunction(features[i]);
+      if (geometry) {
+        (0, _coordinate.add)(centroid, geometry.getCoordinates());
+      } else {
+        features.splice(i, 1);
+      }
+    }
+    (0, _coordinate.scale)(centroid, 1 / features.length);
+
+    var cluster = new _Feature2.default(new _Point2.default(centroid));
+    cluster.set('features', features);
+    return cluster;
+  };
+
+  return Cluster;
+}(_Vector2.default); /**
+                      * @module ol/source/Cluster
+                      */
+
+exports.default = Cluster;
+
+//# sourceMappingURL=Cluster.js.map
+},{"../util.js":"node_modules/ol/util.js","../asserts.js":"node_modules/ol/asserts.js","../Feature.js":"node_modules/ol/Feature.js","../coordinate.js":"node_modules/ol/coordinate.js","../events.js":"node_modules/ol/events.js","../events/EventType.js":"node_modules/ol/events/EventType.js","../extent.js":"node_modules/ol/extent.js","../geom/Point.js":"node_modules/ol/geom/Point.js","../source/Vector.js":"node_modules/ol/source/Vector.js"}],"index.js":[function(require,module,exports) {
 'use strict';
 
 var _OSM = require('ol/source/OSM');
@@ -46713,17 +46957,15 @@ var _Vector2 = _interopRequireDefault(_Vector);
 
 var _style = require('ol/style.js');
 
-var _Select = require('ol/interaction/Select.js');
+var _Cluster = require('ol/source/Cluster');
 
-var _Select2 = _interopRequireDefault(_Select);
-
-var _condition = require('ol/events/condition.js');
+var _Cluster2 = _interopRequireDefault(_Cluster);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var wroclawCoords = [17.0333, 51.1098];
 
-var beerPlaces = [[51.10110399999999, 17.02503619999993, "12 Krok", "http://12-krok.ontap.pl/"], [51.107816, 17.036094999999932, "4hops", "http://4hops.ontap.pl/"], [51.1119942, 17.029769999999985, "Academus Cafe/Pub", "http://academus.ontap.pl/"], [51.109761735964064, 17.02312892083205, "AleBrowar", "http://alebrowar.ontap.pl/"], [51.10756649137447, 17.030112400000007, "Graciarnia Pizzas & Crafts", "http://graciarnia.ontap.pl/"], [51.10845978866974, 17.031663224536942, "Kontynuacja", "http://graciarnia.ontap.pl/"], [51.10142219999999, 17.022805199999993, "La Famiglia Pizzeria", "http://la-famiglia-pizzeria.ontap.pl/"], [51.0998333, 17.030287799999996, "Lamus", "http://lamus.ontap.pl/"], [51.1084059, 17.031682000000046, "Lumberjack", "http://lumberjack.ontap.pl/"], [51.10731556687148, 17.030149950926216, "Marynka, Piwo i Aperitivo", "http://marynka.ontap.pl/"], [51.1104748, 17.032414399999993, "Modra Odra", "http://modra-odra.ontap.pl/"], [51.1092028, 17.031860100000017, "Pogromcy", "http://pogromcy-meatow.ontap.pl/"], [51.13171984855311, 17.05950879264242, "Browar Stu Mostów", "http://stu-mostow.ontap.pl/"], [51.109326656194085, 17.02518484722134, "Szynkarnia", "http://szynkarnia.ontap.pl/"], [51.11274099000954, 17.039767458197048, "Targowa", "http://targowa.ontap.pl/"], [51.108447591287494, 17.024190471163934, "VaffaNapoli", "http://vaffanapoli.ontap.pl/"]];
+var beerPlaces = [[51.10110399999999, 17.02503619999993, "12 Krok", "http://12-krok.ontap.pl/", "Bogusławskiego 11"], [51.107816, 17.036094999999932, "4hops", "http://4hops.ontap.pl/", "Ofiar Oświęcimskich 46"], [51.1119942, 17.029769999999985, "Academus Cafe/Pub", "http://academus.ontap.pl/", "Kiełbaśnicza 23"], [51.109761735964064, 17.02312892083205, "AleBrowar", "http://alebrowar.ontap.pl/", "Włodkowica 27/1a"], [51.10756649137447, 17.030112400000007, "Graciarnia Pizzas & Crafts", "http://graciarnia.ontap.pl/", "Kazimierza Wielkiego 39"], [51.10845978866974, 17.031663224536942, "Kontynuacja", "http://kontynuacja.ontap.pl", "Ofiar Oświęcimskich 17"], [51.10142219999999, 17.022805199999993, "La Famiglia Pizzeria", "http://la-famiglia-pizzeria.ontap.pl/", "Kolejowa 14"], [51.0998333, 17.030287799999996, "Lamus", "http://lamus.ontap.pl/", " Bogusławskiego 97"], [51.1084059, 17.031682000000046, "Lumberjack", "http://lumberjack.ontap.pl/", "Ofiar Oświęcimskich 17"], [51.10731556687148, 17.030149950926216, "Marynka, Piwo i Aperitivo", "http://marynka.ontap.pl/", "Kazimierza Wielkiego 39"], [51.1104748, 17.032414399999993, "Modra Odra", "http://modra-odra.ontap.pl/", "Ratusz 15/1c"], [51.1092028, 17.031860100000017, "Pogromcy", "http://pogromcy-meatow.ontap.pl/", "Rynek 22"], [51.13171984855311, 17.05950879264242, "Browar Stu Mostów", "http://stu-mostow.ontap.pl/", "Długosza 2"], [51.109326656194085, 17.02518484722134, "Szynkarnia", "http://szynkarnia.ontap.pl/", "św. Antoniego 15"], [51.11274099000954, 17.039767458197048, "Targowa", "http://targowa.ontap.pl/", "Piaskowa 17"], [51.108447591287494, 17.024190471163934, "VaffaNapoli", "http://vaffanapoli.ontap.pl/", "Włodkowica 13"]];
 
 var vectorSource = new _Vector2.default({});
 
@@ -46733,12 +46975,13 @@ for (var i = 0; i < beerPlaces.length; i++) {
         projection: "EPSG:4326",
         geometry: new _Point2.default([beerPlaces[i][1], beerPlaces[i][0]]),
         name: beerPlaces[i][2],
-        web: beerPlaces[i][3]
+        web: beerPlaces[i][3],
+        address: beerPlaces[i][4]
     });
 
     var iconStyle = new _style.Style({
         image: new _style.Icon( /** @type {module:ol/style/Icon~Options} */{
-            anchor: [0.5, 46],
+            anchor: [0.5, 35],
             anchorXUnits: 'fraction',
             anchorYUnits: 'pixels',
             src: 'http://icons.iconarchive.com/icons/icons8/windows-8/32/Food-Beer-Glass-icon.png'
@@ -46774,7 +47017,7 @@ var popup = new _Overlay2.default({
     element: element,
     positioning: 'bottom-center',
     stopEvent: false,
-    offset: [0, -50]
+    offset: [0, -45]
 });
 
 map.addOverlay(popup);
@@ -46788,6 +47031,7 @@ map.on('click', function (evt) {
         var coordinates = feature.getGeometry().getCoordinates();
         var featName = feature.get('name');
         var featWeb = feature.get('web');
+        var featAdd = feature.get('address');
         popup.setPosition(coordinates);
         window.open(featWeb, 'Frame');
 
@@ -46811,7 +47055,7 @@ map.on('pointermove', function (e) {
     var hit = map.hasFeatureAtPixel(pixel);
     map.getTarget().style.cursor = hit ? 'pointer' : '';
 });
-},{"ol/source/OSM":"node_modules/ol/source/OSM.js","ol/Feature.js":"node_modules/ol/Feature.js","ol/Map.js":"node_modules/ol/Map.js","ol/Overlay.js":"node_modules/ol/Overlay.js","ol/View.js":"node_modules/ol/View.js","ol/geom/Point.js":"node_modules/ol/geom/Point.js","ol/layer.js":"node_modules/ol/layer.js","ol/source/Vector.js":"node_modules/ol/source/Vector.js","ol/style.js":"node_modules/ol/style.js","ol/interaction/Select.js":"node_modules/ol/interaction/Select.js","ol/events/condition.js":"node_modules/ol/events/condition.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"ol/source/OSM":"node_modules/ol/source/OSM.js","ol/Feature.js":"node_modules/ol/Feature.js","ol/Map.js":"node_modules/ol/Map.js","ol/Overlay.js":"node_modules/ol/Overlay.js","ol/View.js":"node_modules/ol/View.js","ol/geom/Point.js":"node_modules/ol/geom/Point.js","ol/layer.js":"node_modules/ol/layer.js","ol/source/Vector.js":"node_modules/ol/source/Vector.js","ol/style.js":"node_modules/ol/style.js","ol/source/Cluster":"node_modules/ol/source/Cluster.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 
@@ -46840,7 +47084,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = '' || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + '46375' + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + '42083' + '/');
   ws.onmessage = function (event) {
     var data = JSON.parse(event.data);
 
