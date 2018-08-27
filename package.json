@@ -1,21 +1,16 @@
 {
-  "name": "beermap",
+  "name": "js",
   "version": "1.0.0",
-  "description": "map of places with beer in Wro",
-  "main": "index.js",
+  "description": "<img alt=\"Logo\" src=\"http://coderslab.pl/svg/logo-coderslab.svg\" width=\"400\">",
+  "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "parcel index.html",
-    "build": "parcel build --public-url . index.html"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [
-    "map",
-    "beer",
-    "wrocław"
-  ],
-  "author": "Weaver23PH",
+  "author": "",
   "license": "ISC",
   "devDependencies": {
-    "parcel-bundler": "^1.9.7"
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.5",
+    "babel-preset-es2015": "^6.24.1"
   }
 }
